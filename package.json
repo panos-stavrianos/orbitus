@@ -1,0 +1,62 @@
+{
+  "name": "orbitus",
+  "version": "1.0.0",
+  "description": "A reusable Directus + GraphQL codegen library & CLI",
+  "main": "dist/core/index.cjs",
+  "module": "dist/core/index.js",
+  "types": "dist/core/index.d.ts",
+  "bin": {
+    "orbitus": "bin/orbitus"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/core/index.mjs"
+    },
+    "./cli": {
+      "require": "./dist/cli/index.cjs",
+      "import": "./dist/cli/index.mjs"
+    },
+    "./core/plugins/directus-model.js": {
+      "require": "./dist/core/plugins/directus-model.js",
+      "import": "./dist/core/plugins/directus-model.mjs"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsup",
+    "build-and-link": "npm run clean && npm run build && npm link",
+    "build-and-pack": "npm run clean && npm run build && npm pack",
+    "generate": "orbitus generate",
+    "watch": "orbitus watch"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.13.8",
+    "commander": "^14.0.0",
+    "graphql": "^16.11.0",
+    "graphql-codegen-svelte-apollo": "^1.1.0",
+    "graphql-tag": "^2.12.6",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^2.16.5",
+    "@graphql-codegen/core": "^4.0.2",
+    "@graphql-codegen/introspection": "^4.0.3",
+    "@graphql-codegen/schema-ast": "^4.1.0",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@graphql-tools/graphql-file-loader": "^8.0.20",
+    "@graphql-tools/load": "^8.1.0",
+    "@graphql-tools/url-loader": "^8.0.31",
+    "eslint": "^9.30.1",
+    "eslint-config-turbo": "^2.5.4",
+    "execa": "^9.6.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "dotenv": "^16.5.0",
+    "graphql": "^16.11.0",
+    "graphql-codegen-svelte-apollo": "^1.1.0",
+    "svelte": ">4.0.0"
+  }
+}
