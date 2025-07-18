@@ -2,40 +2,52 @@
   "name": "orbitus",
   "version": "1.0.0",
   "description": "A reusable Directus + GraphQL codegen library & CLI",
-  "main": "dist/core/index.cjs",
-  "module": "dist/core/index.js",
+  "license": "MIT",
+  "main": "dist/core/index.js",
+  "module": "dist/core/index.mjs",
   "types": "dist/core/index.d.ts",
   "bin": {
     "orbitus": "bin/orbitus"
   },
   "exports": {
     ".": {
-      "import": "./dist/core/index.mjs"
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.mjs",
+      "require": "./dist/core/index.js"
     },
     "./cli": {
-      "require": "./dist/cli/index.cjs",
-      "import": "./dist/cli/index.mjs"
+      "import": "./dist/cli/index.mjs",
+      "require": "./dist/cli/index.js"
     },
     "./core/plugins/directus-model.js": {
-      "require": "./dist/core/plugins/directus-model.js",
-      "import": "./dist/core/plugins/directus-model.mjs"
+      "types": "./dist/core/plugins/directus-model.d.ts",
+      "import": "./dist/core/plugins/directus-model.mjs",
+      "require": "./dist/core/plugins/directus-model.js"
     }
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "templates"
+  ],
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsup",
-    "build-and-link": "npm run clean && npm run build && npm link",
-    "build-and-pack": "npm run clean && npm run build && npm pack",
-    "generate": "orbitus generate",
-    "watch": "orbitus watch"
+    "prepublishOnly": "npm run clean && npm run build",
+    "build-and-pack": "npm run prepublishOnly && npm pack"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
     "commander": "^14.0.0",
-    "graphql": "^16.11.0",
-    "graphql-codegen-svelte-apollo": "^1.1.0",
     "graphql-tag": "^2.12.6",
     "ts-node": "^10.9.2"
+  },
+  "peerDependencies": {
+    "dotenv": "^16.5.0",
+    "graphql": "^16.11.0",
+    "graphql-codegen-svelte-apollo": "^1.1.0",
+    "svelte": ">4.0.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^2.16.5",
@@ -53,10 +65,7 @@
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   },
-  "peerDependencies": {
-    "dotenv": "^16.5.0",
-    "graphql": "^16.11.0",
-    "graphql-codegen-svelte-apollo": "^1.1.0",
-    "svelte": ">4.0.0"
+  "engines": {
+    "node": ">=18"
   }
 }
