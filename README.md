@@ -1,177 +1,187 @@
 # 🛰️ Orbitus
 
-**Type‑safe model generation and GraphQL helpers for Directus.**
+**Type‑safe model generation & GraphQL helpers for Directus.**
 
-`Orbitus` is a CLI tool and utility library that generates models and wraps GraphQL queries from [Directus](https://directus.io/), using [GraphQL Code Generator](https://the-guild.dev/graphql/codegen/docs/getting-started) under the hood. It also exports base models and helpers that can be extended in your project.
+> Build fully‑typed data access in minutes. Works great with **SvelteKit** but plugs into **any TypeScript project**.
 
-Perfect match for **SvelteKit**, but works with **any TypeScript project**.
+---
+
+## 🚀 TL;DR
+
+```bash
+npm i orbitus                     # install
+export PUBLIC_DIRECTUS_URL="https://directus.example.com"  # required env var
+npx orbitus generate              # generate models + typed GraphQL
+```
 
 ---
 
 ## ✨ Features
 
-* 🌍 **Built‑in support for multilingual content** – handle `translations[]` cleanly with a helper
-* 🧠 **Type‑safe models** from your Directus collections
-* 🔌 **Auto‑wrap GraphQL** queries & mutations
-* 🧱 **Extendable base models** with custom logic
-* 🛠️ **CLI for fast codegen**, fits any build pipeline
-* 🎯 **Framework‑agnostic**: Works with SvelteKit, Next.js, Node, etc.
+* 🧠 **Type‑safe models** generated from your collections
+* 🔌 **Auto‑wrapped GraphQL** queries & mutations
+* 🧱 **Extendable base models** for custom logic
+* 🛠️ **Zero‑config CLI** that fits any build pipeline
+* 🌍 **Seamless multilingual content** — handle `translations[]` with a helper
 
 ---
 
-## 🔑 Required Environment Variable
+## 🔑 Prerequisite
 
-Orbitus relies on a single mandatory environment variable:
+| Env Variable          | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| `PUBLIC_DIRECTUS_URL` | Base URL of your Directus instance **(no slash)** |
 
-| Variable              | Description                                                    |
-| --------------------- | -------------------------------------------------------------- |
-| `PUBLIC_DIRECTUS_URL` | Base URL of your Directus instance (without a trailing slash). |
-
-The variable is used to build the endpoint for every GraphQL query.
-If it’s missing, Orbitus will throw during runtime.
+Orbitus builds every GraphQL endpoint from this value and will throw at runtime if it’s missing.
 
 ---
 
-## 🚀 Installation
+## 📦 Installation
 
 ```bash
 npm install orbitus
 ```
 
+Add the env variable to `.env` (or your platform‑specific secret store).
+
 ---
 
-## ⚙️ Configuration
-
-Create a `orbitus.config.js` file at the root of your project:
+## ⚙️ Configuration (`orbitus.config.js`)
 
 ```javascript
-/**
- * @typedef {import('orbitus').OrbitusConfig} OrbitusConfig
- */
+/** @typedef {import('orbitus').OrbitusConfig} OrbitusConfig */
 
 /** @type {OrbitusConfig} */
 const config = {
-  apiUrl: 'https://directus.example.com',
-  adminToken: 'secret-admin-token',
-  output: 'src/lib/graphql',
-  modelsPath: '$lib/models',
-  documents: 'src/**/*.gql',
-  collections: {
-    articles: 'ArticleModel',
-    articles_translations: 'ArticleTranslationModel',
-    articles_files: 'ArticleFileModel',
-    info: 'InfoModel',
-    info_translations: 'InfoTranslationModel',
-    directus_files: 'FileModel'
-  }
+    apiUrl: 'https://directus.example.com',   // Directus instance
+    adminToken: 'secret-admin-token',         // optional — unlock full schema
+    output: 'src/lib/graphql',                // generated files
+    modelsPath: '$lib/models',                // where your extended models live
+    documents: 'src/**/*.gql',                // GraphQL ops glob
+    collections: {
+        articles: 'ArticleModel',
+        articles_translations: 'ArticleTranslationModel',
+        articles_files: 'ArticleFileModel',
+        info: 'InfoModel',
+        info_translations: 'InfoTranslationModel',
+        directus_files: 'FileModel'
+    }
 };
 
 export default config;
 ```
 
-### 🔍 Config Breakdown
+### 🔍 Field Guide
 
-* **`apiUrl`** – Your Directus instance URL
-* **`adminToken`** – Optional token for full schema access
-* **`output`** – Where generated files are saved
-* **`modelsPath`** – Path to your extended models
-* **`documents`** – Glob for GraphQL operations
-* **`collections`** – Maps collection names to your model class names
+| Key           | Notes                                   |
+| ------------- | --------------------------------------- |
+| `apiUrl`      | URL to your Directus instance           |
+| `adminToken`  | **Optional** — required for full schema |
+| `output`      | Folder where Orbitus writes generated   |
+| `modelsPath`  | Path to your extended models            |
+| `documents`   | Glob pattern for `.gql` operations      |
+| `collections` | Map collection → class name             |
 
 ---
 
-## 🧱 Creating Models
+## 🧱 Extending Models
 
-This library generates `*_ModelBase` classes you can extend with your own logic.
-
-```ts
-// article-model.ts
-import {
-  Articles_ModelBase,
-  Articles_Translations_ModelBase
-} from '$lib/graphql/model-bases';
-import { WithTranslation } from 'orbitus';
-
-export class ArticleTranslationModel extends Articles_Translations_ModelBase {}
-
-export class ArticleModel extends WithTranslation<ArticleTranslationModel>()(Articles_ModelBase) {
-  get imagesList() {
-    return this.images?.map(img => img?.directus_files_id);
-  }
-}
-```
-
-If there's no `translations[]` field:
+Orbitus creates `*_ModelBase` classes. Extend them to add domain logic:
 
 ```ts
-// file-model.ts
-import { Directus_Files_ModelBase } from '$lib/graphql/model-bases';
+// models.ts
+import {Directus_Files_ModelBase} from '$lib/graphql/model-bases';
+import {PUBLIC_DIRECTUS_URL} from '$env/static/public';
 
 export class FileModel extends Directus_Files_ModelBase {
-  get url() {
-    return `${PUBLIC_DIRECTUS_URL}/assets/${this.id}`;
-  }
+    get url() {
+        return `${PUBLIC_DIRECTUS_URL}/assets/${this.id}`;
+    }
+}
+```
+
+If you need to handle translations, use the `WithTranslation` helper:
+
+```ts
+// models.ts
+import {
+    Articles_ModelBase,
+    Articles_Translations_ModelBase
+} from '$lib/graphql/model-bases';
+import {WithTranslation} from 'orbitus';
+
+export class ArticleModel extends WithTranslation<Articles_Translations_ModelBase>()(Articles_ModelBase) {
+    get imagesList() {
+        return this.images?.map(img => img?.directus_files_id);
+    }
 }
 ```
 
 ---
 
-## ⚡ Quick Start: From Raw to Typed Models
-
-> Go from `data.articles` → `ArticleModel` instances with zero boilerplate.
+## ⚡ Quick Usage
 
 ```ts
-import { ArticleModel } from './article-model';
-import { AsyncGetArticleBySlug } from './graphql/generated';
+import {ArticleModel} from './models';
+import {AsyncGetArticleBySlug} from './graphql/generated';
 
-const { data } = await AsyncGetArticleBySlug({
-  variables: { lang: 'en-US', slug: 'my-first-post' }
+const {data} = await AsyncGetArticleBySlug({
+    variables: {lang: 'en-US', slug: 'my-first-post'}
 });
 
 const article = ArticleModel.create(data.articles[0]);
 
 console.log(article.slug);         // raw field
 console.log(article.t?.title);     // translated title
-console.log(article.imagesList);   // your custom method
+console.log(article.imagesList);   // custom getter
 
+// Multiple records
 const articles = ArticleModel.createFromArray(data.articles);
 ```
 
-Need raw JSON again? Just call `article.toRaw()`.
+Need raw JSON again? `article.toRaw()` has your back.
 
 ---
 
-## ⚠️ Accessing Directus System Collections
+## 🔐 Authenticated Requests
 
-When you query or mutate **Directus system collections** (e.g. `directus_users`) you must run the request against the `/graphql/system` endpoint.
-With Orbitus, simply pass `system: true` inside the GraphQL `context` object:
+When you need to execute a query or mutation on behalf of a logged‑in user, simply pass their **JWT access token** through the `context` option. Orbitus automatically attaches it as an `Authorization: Bearer` header:
 
 ```ts
-await Login({
-  variables: { email, password },
-  context: { system: true } // 👈 mandatory for system collections
+await AsyncUpdateProfile({
+    variables: {name: 'Alice'},
+    context: {token: userToken}          // → Authorization: Bearer <token>
 });
 ```
 
-If `system: true` is omitted the request will default to the public endpoint and will fail with a permissions error.
+If you forget to supply a token where Directus expects authentication, the request will fail with **401 Unauthorized**.
 
 ---
 
-## 🧪 CLI
+## ⚠️ Accessing System Collections
 
-Generate everything with a single command:
+When you hit **Directus system collections** (e.g. `directus_users`) you must use `/graphql/system`.
 
-```bash
-orbitus generate
+With Orbitus, just add `system: true` in the GraphQL context:
+
+```ts
+await Login({
+    variables: {email, password},
+    context: {system: true}
+});
 ```
 
-Or run via `npx`:
+If omitted, the request goes to the default `/graphql` endpoint, and the request will fail.
 
-```bash
-npx orbitus generate
-```
+---
 
-Or add it to `package.json`:
+## 🧪 CLI Commands
+
+| Command            | Description                       |
+| ------------------ | --------------------------------- |
+| `orbitus generate` | Generate models & wrapped queries |
+
+Add a script:
 
 ```json
 "scripts": {
@@ -181,25 +191,15 @@ Or add it to `package.json`:
 
 ---
 
-## 🧩 BaseModel API
+## 🧩 BaseModel Cheatsheet
 
-All models extend `BaseModel`, which gives you access to:
-
-* Raw field access (`model.raw`) and auto‑proxied access (`model.field`)
-* Translation support via `.t` for localized fields (when using `WithTranslation()`)
-
-### `create(raw: T): T & Model`
-
-Wraps a single raw record.
-
-### `createFromArray(raws: T[]): (T & Model)[]`
-
-Wraps multiple raw records.
-
-### `toRaw()`
-
-Returns the original JSON object.
+* **`create(raw)`** – Wrap one record
+* **`createFromArray(raw[])`** – Wrap many
+* **`toRaw()`** – Get original JSON
+* `model.t` – Active translation (when using `WithTranslation`)
 
 ---
 
-That’s it — write minimal code and get fully typed, ergonomic models for your Directus data. 🎯
+## 📜 License
+
+MIT © Panos Stavrianos — happily accepting PRs 💜
