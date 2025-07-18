@@ -29,16 +29,14 @@ npm install orbitus
 
 ## ⚙️ Configuration
 
-Create a `directus.config.js` file at the root of your project:
+Create a `orbitus.config.js` file at the root of your project:
 
 ```javascript
-// @ts-check
-
 /**
- * @typedef {import('orbitus').DirectusConfig} DirectusConfig
+ * @typedef {import('orbitus').OrbitusConfig} OrbitusConfig
  */
 
-/** @type {DirectusConfig} */
+/** @type {OrbitusConfig} */
 const config = {
   apiUrl: 'https://directus.example.com',
   adminToken: 'secret-admin-token',

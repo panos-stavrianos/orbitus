@@ -18,11 +18,11 @@ import * as svelteNs from 'graphql-codegen-svelte-apollo';
 
 
 /**
- * CLI entrypoint: loads your `directus.config.js` file,
+ * CLI entrypoint: loads your `orbitus.config.js` file,
  * fetches schemas & docs, and emits all codegen outputs.
  */
 export async function generateCmd(): Promise<void> {
-    const cfgPath = path.resolve(process.cwd(), 'directus.config.js')
+    const cfgPath = path.resolve(process.cwd(), 'orbitus.config.js')
     const cfgUrl = pathToFileURL(cfgPath).href
     const {default: cfg} = await import(cfgUrl) as {
         default: {

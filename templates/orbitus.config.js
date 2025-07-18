@@ -1,6 +1,8 @@
-import { /** @type {import('./types').DirectusConfig} */ DirectusConfig } from './types.js';
+/**
+ * @typedef {import('orbitus').OrbitusConfig} OrbitusConfig
+ */
 
-/** @type {DirectusConfig} */
+/** @type {OrbitusConfig} */
 const config = {
     apiUrl: "https://example",
     adminToken: "",

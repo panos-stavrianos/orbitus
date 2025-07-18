@@ -1,5 +1,5 @@
-// DirectusConfig passed by users in directus.config.ts
-export interface DirectusConfig {
+// OrbitusConfig passed by users in directus.config.ts
+export interface OrbitusConfig {
     apiUrl: string;                  // e.g. "https://api.myproject.com"
     adminToken?: string;                 // optional system token
     output?: string;                 // where to emit generated files
