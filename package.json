@@ -1,6 +1,6 @@
 {
   "name": "orbitus",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A reusable Directus + GraphQL codegen library & CLI",
   "license": "MIT",
   "repository": {
