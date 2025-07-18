@@ -1,6 +1,6 @@
 # 🛰️ Orbitus
 
-**Type-safe model generation and GraphQL helpers for Directus.**
+**Type‑safe model generation and GraphQL helpers for Directus.**
 
 `Orbitus` is a CLI tool and utility library that generates models and wraps GraphQL queries from [Directus](https://directus.io/), using [GraphQL Code Generator](https://the-guild.dev/graphql/codegen/docs/getting-started) under the hood. It also exports base models and helpers that can be extended in your project.
 
@@ -10,12 +10,25 @@ Perfect match for **SvelteKit**, but works with **any TypeScript project**.
 
 ## ✨ Features
 
-* 🌍 **Built-in support for multilingual content** – handle `translations[]` cleanly with a helper
-* 🧠 **Type-safe models** from your Directus collections
-* 🔌 **Auto-wrap GraphQL** queries & mutations
+* 🌍 **Built‑in support for multilingual content** – handle `translations[]` cleanly with a helper
+* 🧠 **Type‑safe models** from your Directus collections
+* 🔌 **Auto‑wrap GraphQL** queries & mutations
 * 🧱 **Extendable base models** with custom logic
 * 🛠️ **CLI for fast codegen**, fits any build pipeline
-* 🎯 **Framework-agnostic**: Works with SvelteKit, Next.js, Node, etc.
+* 🎯 **Framework‑agnostic**: Works with SvelteKit, Next.js, Node, etc.
+
+---
+
+## 🔑 Required Environment Variable
+
+Orbitus relies on a single mandatory environment variable:
+
+| Variable              | Description                                                    |
+| --------------------- | -------------------------------------------------------------- |
+| `PUBLIC_DIRECTUS_URL` | Base URL of your Directus instance (without a trailing slash). |
+
+The variable is used to build the endpoint for every GraphQL query.
+If it’s missing, Orbitus will throw during runtime.
 
 ---
 
@@ -128,6 +141,22 @@ Need raw JSON again? Just call `article.toRaw()`.
 
 ---
 
+## ⚠️ Accessing Directus System Collections
+
+When you query or mutate **Directus system collections** (e.g. `directus_users`) you must run the request against the `/graphql/system` endpoint.
+With Orbitus, simply pass `system: true` inside the GraphQL `context` object:
+
+```ts
+await Login({
+  variables: { email, password },
+  context: { system: true } // 👈 mandatory for system collections
+});
+```
+
+If `system: true` is omitted the request will default to the public endpoint and will fail with a permissions error.
+
+---
+
 ## 🧪 CLI
 
 Generate everything with a single command:
@@ -156,7 +185,7 @@ Or add it to `package.json`:
 
 All models extend `BaseModel`, which gives you access to:
 
-* Raw field access (`model.raw`) and auto-proxied access (`model.field`)
+* Raw field access (`model.raw`) and auto‑proxied access (`model.field`)
 * Translation support via `.t` for localized fields (when using `WithTranslation()`)
 
 ### `create(raw: T): T & Model`
