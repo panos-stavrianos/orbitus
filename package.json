@@ -3,6 +3,14 @@
   "version": "1.0.1",
   "description": "A reusable Directus + GraphQL codegen library & CLI",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/panos-stavrianos/orbitus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/panos-stavrianos/orbitus/issues"
+  },
+  "homepage": "https://github.com/panos-stavrianos/orbitus#readme",
   "main": "dist/core/index.js",
   "module": "dist/core/index.mjs",
   "types": "dist/core/index.d.ts",
@@ -35,7 +43,8 @@
     "clean": "rm -rf dist",
     "build": "tsup",
     "prepublishOnly": "npm run clean && npm run build",
-    "build-and-pack": "npm run prepublishOnly && npm pack"
+    "build-and-pack": "npm run prepublishOnly && npm pack",
+    "version-bump": "npm version patch"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
