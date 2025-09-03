@@ -1,7 +1,7 @@
 import {env} from "$env/dynamic/public";
-import {createClient} from 'orbitus'
+import {createClientPool} from 'orbitus'
 
-const client = createClient({
+const client = createClientPool({
     directusUrl: env.PUBLIC_DIRECTUS_URL,
 })
 
