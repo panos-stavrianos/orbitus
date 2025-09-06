@@ -74,8 +74,20 @@ class ClientPool {
                 }
                 this.map.delete(k)
                 console.log(`[ClientPool] Sweeping idle client for key ${k}`, 'length=', this.map.size)
-
             }
+        }
+    }
+
+    destroy(token: Token) {
+        const k = this.key(token)
+        const meta = this.map.get(k)
+        if (meta) {
+            try {
+                void meta.client.clearStore()
+            } catch {
+            }
+            this.map.delete(k)
+            console.log(`[ClientPool] Destroyed client for key ${k}`, 'length=', this.map.size)
         }
     }
 }
