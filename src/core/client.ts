@@ -78,16 +78,27 @@ class ClientPool {
         }
     }
 
-    destroy(token: Token) {
-        const k = this.key(token)
+    remove(tok: Token) {
+        const k = this.key(tok)
+        if (k === this.anon) return // keep anon if you want
         const meta = this.map.get(k)
-        if (meta) {
+        if (!meta) return
+        try {
+            void meta.client.clearStore()
+        } catch {
+        }
+        this.map.delete(k)
+        console.log(`[ClientPool] Removed client for ${k}`)
+    }
+
+    clearAll() {
+        for (const [k, meta] of this.map) {
+            if (k === this.anon) continue
             try {
                 void meta.client.clearStore()
             } catch {
             }
             this.map.delete(k)
-            console.log(`[ClientPool] Destroyed client for key ${k}`, 'length=', this.map.size)
         }
     }
 }
@@ -96,11 +107,19 @@ export function createClientPool(
     {directusUrl}: { directusUrl: string },
     cfg?: { maxIdleMs?: number; sweepEveryMs?: number }
 ) {
-    if (!directusUrl) throw new Error('Missing Directus URL')
     const pool = new ClientPool(directusUrl, cfg?.maxIdleMs, cfg?.sweepEveryMs)
 
-    return new Proxy({}, {
+    const proxy = new Proxy({}, {
         get(_t, prop) {
+            // expose control methods explicitly
+            if (prop === 'removeClient') {
+                return (token: Token) => pool.remove(token)
+            }
+            if (prop === 'clearAllClients') {
+                return () => pool.clearAll()
+            }
+
+            // normal Apollo delegation
             return (...args: any[]) => {
                 const token: Token = args?.[0]?.context?.token ?? null
                 const real: any = pool.get(token)
@@ -111,5 +130,10 @@ export function createClientPool(
         getPrototypeOf() {
             return ApolloClient.prototype
         }
-    }) as unknown as ApolloClientType<NormalizedCacheObject>
+    })
+
+    return proxy as unknown as ApolloClientType<NormalizedCacheObject> & {
+        removeClient: (token: Token) => void
+        clearAllClients: () => void
+    }
 }
