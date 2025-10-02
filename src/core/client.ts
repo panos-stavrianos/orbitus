@@ -8,7 +8,7 @@ import {CachePolicy} from "./types";
 
 type Token = string | null | undefined
 
-function makeClient(directusUrl: string) {
+function makeClient(directusUrl: string, cachePolicy: CachePolicy): ApolloClient<NormalizedCacheObject> {
     const defaultLink = new HttpLink({uri: `${directusUrl}/graphql`})
     const systemLink = new HttpLink({uri: `${directusUrl}/graphql/system`})
 
@@ -23,11 +23,11 @@ function makeClient(directusUrl: string) {
         link: ApolloLink.from([authLink, http]),
         defaultOptions: {
             query: {
-                fetchPolicy: 'no-cache',
+                fetchPolicy: cachePolicy,
                 errorPolicy: 'all'
             },
             watchQuery: {
-                fetchPolicy: 'no-cache',
+                fetchPolicy: cachePolicy,
                 errorPolicy: 'all'
             }
         },
@@ -46,6 +46,7 @@ class ClientPool {
 
     constructor(
         private url: string,
+        private cachePolicy: CachePolicy = 'cache-first',
         private maxIdleMs = 30 * 60_000,  // 30 min default
         sweepEveryMs = 5 * 60_000         // sweep every 5 min
     ) {
@@ -63,7 +64,7 @@ class ClientPool {
     }
 
     private newMeta(): Meta {
-        return {client: makeClient(this.url), lastUsed: this.now()}
+        return {client: makeClient(this.url, this.cachePolicy), lastUsed: this.now()}
     }
 
     get(tok: Token) {
@@ -122,7 +123,7 @@ export function createClientPool(
         sweepEveryMs?: number
     }
 ) {
-    const pool = new ClientPool(directusUrl, cfg?.maxIdleMs, cfg?.sweepEveryMs)
+    const pool = new ClientPool(directusUrl, cfg?.cachePolicy, cfg?.maxIdleMs, cfg?.sweepEveryMs)
 
     const proxy = new Proxy({}, {
         get(_t, prop) {

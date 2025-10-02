@@ -16,7 +16,6 @@ export type CachePolicy =
     'cache-first' |
     'cache-only' |
     'network-only' |
-    'standby' |
-    'cache-and-network';
+    'standby';
 
 // Export this for users to type their directus.config.ts
