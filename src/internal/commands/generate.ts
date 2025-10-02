@@ -15,6 +15,8 @@ import * as opsPlugin from '@graphql-codegen/typescript-operations';
 import * as introPlugin from '@graphql-codegen/introspection';
 import * as astPlugin from '@graphql-codegen/schema-ast';
 import * as svelteNs from 'graphql-codegen-svelte-apollo';
+import {OrbitusConfig} from "../../core";
+import {CachePolicy} from "../../core/types";
 
 
 /**
@@ -29,6 +31,9 @@ export async function generateCmd(): Promise<void> {
             apiUrl: string;
             adminToken?: string;
             output?: string;
+            cachePolicy?: CachePolicy;
+            maxIdleMs?: number;
+            sweepEveryMs?: number;
             modelsPath: string;
             documents?: string | string[];
             collections?: Record<string, string>;
@@ -144,8 +149,16 @@ export async function generateCmd(): Promise<void> {
         '../../templates/client.ts'
     );
     const clientTemplateContent = fs.readFileSync(clientTemplatePath, 'utf8');
+
+    // replace placeholders with config values or defaults
+    const replacedContent = clientTemplateContent
+        .replace('%cachePolicy%', JSON.stringify(cfg.cachePolicy || 'cache-first'))
+        .replace('%maxIdleMs%', String(cfg.maxIdleMs || 30 * 60_000))
+        .replace('%sweepEveryMs%', String(cfg.sweepEveryMs || 5 * 60_000));
+
+
     const clientOutputPath = path.join(outDir, 'client.ts');
-    fs.writeFileSync(clientOutputPath, clientTemplateContent, 'utf8');
+    fs.writeFileSync(clientOutputPath, replacedContent, 'utf8');
 
 
     console.log('✔  schema.json, schema.graphql, types.ts, generated.ts & model-bases.ts generated in', outDir);

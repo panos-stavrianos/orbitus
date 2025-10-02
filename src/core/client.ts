@@ -4,6 +4,7 @@ import {ApolloClient, ApolloLink} from '@apollo/client/core/index.js'
 import {InMemoryCache} from '@apollo/client/cache/cache.cjs'
 import {HttpLink} from '@apollo/client/link/http/http.cjs'
 import {setContext} from '@apollo/client/link/context/context.cjs'
+import {CachePolicy} from "./types";
 
 type Token = string | null | undefined
 
@@ -18,8 +19,18 @@ function makeClient(directusUrl: string) {
     const http = ApolloLink.split(op => op.getContext().system === true, systemLink, defaultLink)
 
     return new ApolloClient<NormalizedCacheObject>({
-        link: ApolloLink.from([authLink, http]),
         cache: new InMemoryCache(),
+        link: ApolloLink.from([authLink, http]),
+        defaultOptions: {
+            query: {
+                fetchPolicy: 'no-cache',
+                errorPolicy: 'all'
+            },
+            watchQuery: {
+                fetchPolicy: 'no-cache',
+                errorPolicy: 'all'
+            }
+        },
     })
 }
 
@@ -105,7 +116,11 @@ class ClientPool {
 
 export function createClientPool(
     {directusUrl}: { directusUrl: string },
-    cfg?: { maxIdleMs?: number; sweepEveryMs?: number }
+    cfg?: {
+        cachePolicy: CachePolicy,
+        maxIdleMs?: number;
+        sweepEveryMs?: number
+    }
 ) {
     const pool = new ClientPool(directusUrl, cfg?.maxIdleMs, cfg?.sweepEveryMs)
 
