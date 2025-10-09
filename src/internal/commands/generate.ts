@@ -16,7 +16,7 @@ import * as introPlugin from '@graphql-codegen/introspection';
 import * as astPlugin from '@graphql-codegen/schema-ast';
 import * as svelteNs from 'graphql-codegen-svelte-apollo';
 import {OrbitusConfig} from "../../core";
-import {CachePolicy} from "../../core/types";
+import {CachePolicy, CredentialsInCookies} from "../../core/types";
 
 
 /**
@@ -30,6 +30,7 @@ export async function generateCmd(): Promise<void> {
         default: {
             apiUrl: string;
             adminToken?: string;
+            credentialsInCookies?: CredentialsInCookies;
             output?: string;
             cachePolicy?: CachePolicy;
             maxIdleMs?: number;
@@ -154,7 +155,8 @@ export async function generateCmd(): Promise<void> {
     const replacedContent = clientTemplateContent
         .replace('%cachePolicy%', JSON.stringify(cfg.cachePolicy || 'cache-first'))
         .replace('%maxIdleMs%', String(cfg.maxIdleMs || 30 * 60_000))
-        .replace('%sweepEveryMs%', String(cfg.sweepEveryMs || 5 * 60_000));
+        .replace('%sweepEveryMs%', String(cfg.sweepEveryMs || 5 * 60_000))
+        .replace('%credentialsInCookies%', JSON.stringify(cfg.credentialsInCookies || 'include'));
 
 
     const clientOutputPath = path.join(outDir, 'client.ts');

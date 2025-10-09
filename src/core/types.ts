@@ -2,6 +2,7 @@
 export interface OrbitusConfig {
     apiUrl: string;                  // e.g. "https://api.myproject.com"
     adminToken?: string;                 // optional system token
+    credentialsInCookies: CredentialsInCookies; // how to handle cookies
     output?: string;                 // where to emit generated files
     modelsPath: string;
     cachePolicy?: CachePolicy; // default cache policy for Apollo Client
@@ -17,5 +18,7 @@ export type CachePolicy =
     'cache-only' |
     'network-only' |
     'standby';
+
+export type CredentialsInCookies = 'include' | 'same-origin' | 'omit';
 
 // Export this for users to type their directus.config.ts

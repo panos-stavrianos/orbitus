@@ -6,7 +6,8 @@ const client = createClientPool({
 }, {
     cachePolicy: %cachePolicy%,
     maxIdleMs: %maxIdleMs%,
-    sweepEveryMs: %sweepEveryMs%
+    sweepEveryMs: %sweepEveryMs%,
+    credentialsInCookies: %credentialsInCookies%
 })
 
 export default client

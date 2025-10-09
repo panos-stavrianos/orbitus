@@ -4,19 +4,24 @@ import {ApolloClient, ApolloLink} from '@apollo/client/core/index.js'
 import {InMemoryCache} from '@apollo/client/cache/cache.cjs'
 import {HttpLink} from '@apollo/client/link/http/http.cjs'
 import {setContext} from '@apollo/client/link/context/context.cjs'
-import {CachePolicy} from "./types";
+import {CachePolicy, CredentialsInCookies} from "./types";
 
 type Token = string | null | undefined
 
-function makeClient(directusUrl: string, cachePolicy: CachePolicy): ApolloClient<NormalizedCacheObject> {
+function makeClient(directusUrl: string, cachePolicy: CachePolicy, credentialsInCookies: CredentialsInCookies): ApolloClient<NormalizedCacheObject> {
     const defaultLink = new HttpLink({uri: `${directusUrl}/graphql`})
     const systemLink = new HttpLink({uri: `${directusUrl}/graphql/system`})
 
-    const authLink = setContext((_, ctx: any) =>
-        ctx?.token ? {headers: {...ctx.headers, authorization: `Bearer ${ctx.token}`}} : ctx
+    const authLink = setContext((_, ctx: any) => {
+            const headers = ctx?.token ? {...ctx.headers, authorization: `Bearer ${ctx.token}`} : ctx?.headers;
+            const credentials= ctx?.auth === 'cookies' ? credentialsInCookies : 'omit';
+            return {headers, credentials}
+        }
     )
 
-    const http = ApolloLink.split(op => op.getContext().system === true, systemLink, defaultLink)
+    const http = ApolloLink.split(op => {
+        return op.getContext().system === true;
+    }, systemLink, defaultLink)
 
     return new ApolloClient<NormalizedCacheObject>({
         cache: new InMemoryCache(),
@@ -46,12 +51,13 @@ class ClientPool {
 
     constructor(
         private url: string,
+        private credentialsInCookies: CredentialsInCookies = 'include',
         private cachePolicy: CachePolicy = 'cache-first',
-        private maxIdleMs = 30 * 60_000,  // 30 min default
-        sweepEveryMs = 5 * 60_000         // sweep every 5 min
+        private maxIdleMs = 30 * 60_000,
+        private sweepEveryMs = 5 * 60_000,
     ) {
         this.map.set(this.anon, this.newMeta())
-        this.timer = setInterval(() => this.sweep(), sweepEveryMs)
+        this.timer = setInterval(() => this.sweep(), this.sweepEveryMs)
         if (typeof this.timer?.unref === 'function') this.timer.unref()
     }
 
@@ -64,7 +70,7 @@ class ClientPool {
     }
 
     private newMeta(): Meta {
-        return {client: makeClient(this.url, this.cachePolicy), lastUsed: this.now()}
+        return {client: makeClient(this.url, this.cachePolicy, this.credentialsInCookies), lastUsed: this.now()}
     }
 
     get(tok: Token) {
@@ -75,7 +81,7 @@ class ClientPool {
     }
 
     private sweep() {
-        console.log('[ClientPool] Sweep start', 'length=', this.map.size)
+        // console.log('[ClientPool] Sweep start', 'length=', this.map.size)
         const cutoff = this.now() - this.maxIdleMs
         for (const [k, m] of this.map) {
             if (k === this.anon) continue
@@ -85,7 +91,7 @@ class ClientPool {
                 } catch {
                 }
                 this.map.delete(k)
-                console.log(`[ClientPool] Sweeping idle client for key ${k}`, 'length=', this.map.size)
+                // console.log(`[ClientPool] Sweeping idle client for key ${k}`, 'length=', this.map.size)
             }
         }
     }
@@ -118,12 +124,13 @@ class ClientPool {
 export function createClientPool(
     {directusUrl}: { directusUrl: string },
     cfg?: {
+        credentialsInCookies?: CredentialsInCookies,
         cachePolicy: CachePolicy,
-        maxIdleMs?: number;
-        sweepEveryMs?: number
+        maxIdleMs?: number,
+        sweepEveryMs?: number,
     }
 ) {
-    const pool = new ClientPool(directusUrl, cfg?.cachePolicy, cfg?.maxIdleMs, cfg?.sweepEveryMs)
+    const pool = new ClientPool(directusUrl, cfg?.credentialsInCookies, cfg?.cachePolicy, cfg?.maxIdleMs, cfg?.sweepEveryMs)
 
     const proxy = new Proxy({}, {
         get(_t, prop) {
