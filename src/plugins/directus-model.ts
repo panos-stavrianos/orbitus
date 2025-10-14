@@ -60,15 +60,22 @@ function buildModelBase(
     return this.raw.${fieldName}
       ? this.raw.${fieldName}.map((item: any) => new ${modelName}(item))
       : [];
-  }`;
+  }
+    set ${fieldName}(items: ${modelName}[]) {
+      this.raw.${fieldName} = items.map(i => i.raw);
+    }`;
                 }
                 return `  get ${fieldName}(): ${modelName} | null {
     return this.raw.${fieldName} ? new ${modelName}(this.raw.${fieldName}) : null;
+  }
+  set ${fieldName}(item: ${modelName} | null) { 
+  this.raw.${fieldName} = item ? item.raw : null ;
   }`;
             }
 
             /* primitive passthrough */
-            return `  get ${fieldName}() { return this.raw.${fieldName}; }`;
+            return `  get ${fieldName}() { return this.raw.${fieldName}; }
+  set ${fieldName}(value) { this.raw.${fieldName} = value; }`;
         })
         .join('\n');
 

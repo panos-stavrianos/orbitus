@@ -58,6 +58,7 @@
     "@apollo/client": "^3.13.8",
     "commander": "^14.0.0",
     "graphql-tag": "^2.12.6",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2"
   },
   "peerDependencies": {

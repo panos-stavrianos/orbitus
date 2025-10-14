@@ -7,7 +7,7 @@ type Ctor<I = any, A extends any[] = any[]> = new (...args: A) => I;
  * - Provides type-safe static create() and createFromArray() helpers
  */
 export abstract class BaseModel<T extends object> {
-    constructor(protected raw: T) {
+    constructor(public raw: T) {
     }
 
     /** Create a proxied instance */
