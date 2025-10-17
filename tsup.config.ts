@@ -46,6 +46,7 @@ export default defineConfig([
             js: format === 'esm' ? '.mjs' : '.js',
             dts: format === 'esm' ? '.d.mts' : '.d.ts',
         }),
+        onSuccess: 'cp templates/model.hbs dist/core/plugins/model.hbs',
     }
 ])
 

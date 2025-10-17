@@ -1,0 +1,28 @@
+import type { {{TypeName}} as {{RawAlias}} } from './generated';
+
+export class {{TypeName}}_ModelBase extends BaseModel<{{RawAlias}}> {
+{{#each fields}}
+    {{#if isModel}}
+        {{#if isList}}
+            get {{name}}() {
+            return this.raw.{{name}} ? this.raw.{{name}}.map((i) => new {{modelName}}(i)) : [];
+            }
+            set {{name}}(items: {{modelName}}[]) {
+            this.raw.{{name}} = items.map(i => i.raw);
+            }
+        {{else}}
+            get {{name}}(): {{modelName}} | string | null {
+            const value = this.raw.{{name}};
+            return value === null ? null : (typeof value === "string" ? value : new {{modelName}}(value));
+            }
+            set {{name}}(item: {{modelName}} | string | null) {
+            this.raw.{{name}} = item === null ? null : (typeof item === "string" ? item : item.raw);
+            }
+        {{/if}}
+    {{else}}
+        get {{name}}() { return this.raw.{{name}}; }
+        set {{name}}(value) { this.raw.{{name}} = value; }
+    {{/if}}
+
+{{/each}}
+}

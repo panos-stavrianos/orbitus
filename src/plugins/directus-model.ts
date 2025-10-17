@@ -1,95 +1,81 @@
-import type {PluginFunction} from '@graphql-codegen/plugin-helpers';
+// plugin.ts
+import {readFileSync} from "node:fs";
+import * as path from "node:path";
+import Handlebars from "handlebars";
+import type {PluginFunction} from "@graphql-codegen/plugin-helpers";
 
 const BASEMODEL_IMPORT = `import { BaseModel } from "orbitus";`;
 
-/**
- * Generate one “_ModelBase” class for every GraphQL object type and
- * expose each field via a getter.  Nested models are detected via the
- * `collections` map you pass from CLI (pluginContext.collections).
- */
-export const plugin: PluginFunction = async (
-    schema,
-    _docs,
-    _cfg,
-    info
-) => {
-    console.error('[directus-model] pluginContext =', (info as any).pluginContext);
+function capAllFirstLetters(str: string): string {
+    return str
+        .split("_")
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join("_");
+}
 
-    const ctx = (info as any).pluginContext ?? {};
-
-    const collections: Record<string, string> = ctx.collections ?? {};
-    const modelsPath: string = ctx.modelsPath ?? '';
-    process.stdout.write(`[directus-model] collections: ${JSON.stringify(collections)}\n`);
-
-
-    const importModels =
-        Object.keys(collections).length
-            ? `import { ${Object.values(collections).join(', ')} } from "${modelsPath}";`
-            : '';
-
-    const typeDefs = Object.values(schema.getTypeMap())
-        .filter(
-            (t) =>
-                t.astNode?.kind === 'ObjectTypeDefinition' && !t.name.startsWith('__')
-        )
-        .map((t) => buildModelBase(t, collections))
-        .join('\n\n');
-
-    return [BASEMODEL_IMPORT, importModels, typeDefs].filter(Boolean).join('\n\n');
+type FieldIR = {
+    name: string;
+    isList: boolean;
+    isModel: boolean;
+    modelName?: string;
 };
 
-/* ----------------------- helpers ---------------------------------- */
+type TypeIR = {
+    TypeName: string;
+    RawAlias: string;
+    fields: FieldIR[];
+};
 
-function buildModelBase(
-    type: any,
-    known: Record<string, string>
-): string {
-    const typeName = capitalizeAllFirstLetters(type.name);
+export const plugin: PluginFunction = (schema, _docs, _cfg, info) => {
+    const ctx = (info as any)?.pluginContext ?? {};
+    const collections: Record<string, string> = ctx.collections ?? {};
+    const modelsPath: string = ctx.modelsPath ?? "";
+    const tmplSrc = readFileSync(
+        path.resolve(__dirname, "model.hbs"),
+        "utf8"
+    );
+    const tmpl = Handlebars.compile<TypeIR>(tmplSrc, {noEscape: true});
 
-    const fields = Object.entries(type.getFields())
-        .map(([fieldName, field]: [string, any]) => {
-            const fieldType = String(field.type);        // e.g. [Article!]!
-            const baseType = fieldType.replace(/[!\[\]]/g, ''); // Article
-            const isList = fieldType.startsWith('[');
-            // console.log(`Processing field: ${fieldName} of type ${fieldType} (base: ${baseType}, isList: ${isList})`);
-            /* nested-model detection */
-            if (baseType in known) {
-                const modelName = known[baseType];
-                if (isList) {
-                    return `  get ${fieldName}() {
-    return this.raw.${fieldName}
-      ? this.raw.${fieldName}.map((item: any) => new ${modelName}(item))
-      : [];
-  }
-    set ${fieldName}(items: ${modelName}[]) {
-      this.raw.${fieldName} = items.map(i => i.raw);
-    }`;
-                }
-                return `  get ${fieldName}(): ${modelName} | null {
-    return this.raw.${fieldName} ? new ${modelName}(this.raw.${fieldName}) : null;
-  }
-  set ${fieldName}(item: ${modelName} | null) { 
-  this.raw.${fieldName} = item ? item.raw : null ;
-  }`;
+    // Gather GraphQL object types (skip introspection)
+    const types: any[] = Object.values(schema.getTypeMap()).filter(
+        (t: any) =>
+            t?.astNode?.kind === "ObjectTypeDefinition" && !t.name.startsWith("__")
+    );
+
+    const out: string[] = [];
+
+    // Header imports once
+    out.push(BASEMODEL_IMPORT);
+    if (Object.keys(collections).length) {
+        out.push(
+            `import { ${Object.values(collections).join(", ")} } from "${modelsPath}";`
+        );
+    }
+
+    // Per-type emission
+    for (const t of types) {
+        const TypeName = capAllFirstLetters(t.name);
+        const RawAlias = `Raw_${TypeName}`;
+
+        const fields: FieldIR[] = Object.entries(t.getFields()).map(
+            ([name, field]: [string, any]) => {
+                const fieldType = String(field.type); // e.g. [Article!]!
+                const baseType = fieldType.replace(/[!\[\]]/g, ""); // Article
+                const isList = fieldType.startsWith("[");
+                const isModel = baseType in collections;
+                return {
+                    name,
+                    isList,
+                    isModel,
+                    modelName: isModel ? collections[baseType] : undefined,
+                };
             }
+        );
 
-            /* primitive passthrough */
-            return `  get ${fieldName}() { return this.raw.${fieldName}; }
-  set ${fieldName}(value) { this.raw.${fieldName} = value; }`;
-        })
-        .join('\n');
+        const code = tmpl({TypeName, RawAlias, fields});
+        out.push(code);
+    }
 
-    return `
-import type { ${typeName} as Raw_${typeName} } from './generated';
-
-export class ${typeName}_ModelBase extends BaseModel<Raw_${typeName}> {
-${fields}
-}`.trim();
-}
-
-function capitalizeAllFirstLetters(str: string): string {
-    return str
-        .split('_')
-        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-        .join('_');
-}
+    // Single concatenated TS file
+    return out.join("\n\n");
+};
