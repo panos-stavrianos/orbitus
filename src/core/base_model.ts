@@ -15,7 +15,7 @@ export abstract class BaseModel<T extends object> {
         this: C,
         raw: R
     ): R & InstanceType<C> {
-        const instance = new this(raw);
+        const instance = new this(raw as R);
         return new Proxy(instance as any, {
             get(target, prop, receiver) {
                 if (prop in target) return Reflect.get(target, prop, receiver);
