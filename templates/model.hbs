@@ -1,28 +1,26 @@
-{{!-- one class chunk per type --}}
-
 import type { {{TypeName}} as {{RawAlias}} } from './generated';
 
 export class {{TypeName}}_ModelBase extends BaseModel<{{RawAlias}}> {
 {{#each fields}}
-  {{#if isModel}}
-    {{#if isList}}
-  get {{name}}() {
-    return this.raw.{{name}} ? this.raw.{{name}}.map((item: any) => new {{modelName}}(item)) : [];
-  }
-  set {{name}}(items: Partial<{{modelName}}>[]) {
-    this.raw.{{name}} = items.map(i => i.raw);
-  }
+    {{#if isModel}}
+        {{#if isList}}
+            get {{name}}() {
+                return this.raw.{{name}} ? this.raw.{{name}}.map((item: any) => new {{modelName}}(item)) : [];
+            }
+            set {{name}}(items: Partial<{{modelName}}>[]) {
+                this.raw.{{name}} = items.map(i => i.raw);
+            }
+        {{else}}
+            get {{name}}(): {{modelName}} | null {
+                return this.raw.{{name}} ? new {{modelName}}(this.raw.{{name}}) : null;
+            }
+            set {{name}}(item: Partial<{{modelName}}> | null) {
+                this.raw.{{name}} = item ? item.raw : null;
+            }
+        {{/if}}
     {{else}}
-  get {{name}}(): Partial<{{modelName}}> | null {
-    return this.raw.{{name}} ? new {{modelName}}(this.raw.{{name}}) : null;
-  }
-  set {{name}}(item: Partial<{{modelName}}> | null) {
-    this.raw.{{name}} = item ? item.raw : null;
-  }
+        get {{name}}() { return this.raw.{{name}}; }
+        set {{name}}(value) { this.raw.{{name}} = value; }
     {{/if}}
-  {{else}}
-  get {{name}}() { return this.raw.{{name}}; }
-  set {{name}}(value) { this.raw.{{name}} = value; }
-  {{/if}}
 {{/each}}
 }
