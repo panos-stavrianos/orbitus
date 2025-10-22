@@ -11,7 +11,7 @@ export class {{TypeName}}_ModelBase extends BaseModel<{{RawAlias}}> {
                 this.raw.{{name}} = items.map(i => i.raw);
             }
         {{else}}
-            get {{name}}(): {{modelName}} | null {
+            get {{name}}(): {{modelName}} | Partial<{{modelName}}> | null {
                 return this.raw.{{name}} ? new {{modelName}}(this.raw.{{name}}) : null;
             }
             set {{name}}(item: Partial<{{modelName}}> | null) {
