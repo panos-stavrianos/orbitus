@@ -9,12 +9,12 @@ import {GraphQLFileLoader} from '@graphql-tools/graphql-file-loader'
 import {printSchema, parse} from 'graphql'
 import {codegen} from '@graphql-codegen/core'
 import type {CodegenPlugin} from '@graphql-codegen/plugin-helpers'
+import * as tdnPlugin from '@graphql-codegen/typed-document-node';
 
 import * as tsPlugin from '@graphql-codegen/typescript';
 import * as opsPlugin from '@graphql-codegen/typescript-operations';
 import * as introPlugin from '@graphql-codegen/introspection';
 import * as astPlugin from '@graphql-codegen/schema-ast';
-import * as svelteNs from 'graphql-codegen-svelte-apollo';
 import {CachePolicy, CredentialsInCookies} from "../../core/types";
 import fs_async from "fs/promises";
 import prettier, {type Options as PrettierOptions} from "prettier";
@@ -203,24 +203,26 @@ export async function generateCmd(): Promise<void> {
 
 
     // 4) generated.ts (Svelte Apollo)
-    const saPlugin: CodegenPlugin = {plugin: (svelteNs as any).plugin};
+
+
     write(
         'generated.ts',
         await codegen({
             ...baseOpts,
             filename: 'generated.ts',
             plugins: [
-                {typescript: {}},
-                ...(docs.length ? [{'typescript-operations': {}}] : []),
-                {'graphql-codegen-svelte-apollo': {clientPath: './client', asyncQuery: true}}
+                {typescript: {useTypeImports: true}},
+                {'typescript-operations': {useTypeImports: true}},
+                {'typed-document-node': {useTypeImports: true}}
             ],
             pluginMap: {
                 typescript: tsPlugin,
                 'typescript-operations': opsPlugin,
-                'graphql-codegen-svelte-apollo': saPlugin
+                'typed-document-node': tdnPlugin
             }
         })
-    );
+    )
+
 
     // 5) model-bases.ts (custom Directus plugin)
     // resolve inside the linked package, set external to orbitus

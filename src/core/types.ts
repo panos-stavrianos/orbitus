@@ -16,8 +16,7 @@ export type CachePolicy =
     'no-cache' |
     'cache-first' |
     'cache-only' |
-    'network-only' |
-    'standby';
+    'network-only';
 
 export type CredentialsInCookies = 'include' | 'same-origin' | 'omit';
 

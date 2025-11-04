@@ -1,64 +1,69 @@
 // src/lib/graphql/client.ts
-import type {ApolloClient as ApolloClientType, NormalizedCacheObject} from '@apollo/client/core/index.js'
-import {ApolloClient, ApolloLink} from '@apollo/client/core/index.js'
-import {InMemoryCache} from '@apollo/client/cache/cache.cjs'
-import {HttpLink} from '@apollo/client/link/http/http.cjs'
-import {setContext} from '@apollo/client/link/context/context.cjs'
-import {CachePolicy, CredentialsInCookies} from "./types";
+import {
+    ApolloClient,
+    ApolloLink,
+    InMemoryCache,
+    HttpLink,
+    type ApolloClient as ApolloClientType
+} from '@apollo/client'
+import {setContext} from '@apollo/client/link/context'
+import type {CachePolicy, CredentialsInCookies} from './types'
 
 type Token = string | null | undefined
 
-function makeClient(directusUrl: string, cachePolicy: CachePolicy, credentialsInCookies: CredentialsInCookies): ApolloClient<NormalizedCacheObject> {
+function makeClient(
+    directusUrl: string,
+    cachePolicy: CachePolicy,
+    credentialsInCookies: CredentialsInCookies
+): ApolloClient {
     const defaultLink = new HttpLink({uri: `${directusUrl}/graphql`})
     const systemLink = new HttpLink({uri: `${directusUrl}/graphql/system`})
 
+    // v4: setContext still works; just make the header casing sane
     const authLink = setContext((_, ctx: any) => {
-            const headers = ctx?.token ? {...ctx.headers, authorization: `Bearer ${ctx.token}`} : ctx?.headers;
-            const credentials= ctx?.auth === 'cookies' ? credentialsInCookies : 'omit';
-            return {headers, credentials}
-        }
+        const prev = (ctx && ctx.headers) || {}
+        const headers = ctx?.token ? {...prev, Authorization: `Bearer ${ctx.token}`} : prev
+        const credentials = ctx?.auth === 'cookies' ? credentialsInCookies : 'omit'
+        return {headers, credentials}
+    })
+
+    // be explicit; truthy beats strict === true pitfalls
+    const http = ApolloLink.split(
+        op => Boolean((op.getContext() as any)?.system),
+        systemLink,
+        defaultLink
     )
 
-    const http = ApolloLink.split(op => {
-        return op.getContext().system === true;
-    }, systemLink, defaultLink)
-
-    return new ApolloClient<NormalizedCacheObject>({
+    return new ApolloClient({
         cache: new InMemoryCache(),
         link: ApolloLink.from([authLink, http]),
         defaultOptions: {
-            query: {
-                fetchPolicy: cachePolicy,
-                errorPolicy: 'all'
-            },
-            watchQuery: {
-                fetchPolicy: cachePolicy,
-                errorPolicy: 'all'
-            }
-        },
+            query: {fetchPolicy: cachePolicy, errorPolicy: 'all'},
+            watchQuery: {fetchPolicy: cachePolicy, errorPolicy: 'all'}
+        }
     })
 }
 
 interface Meta {
-    client: ApolloClient<NormalizedCacheObject>
+    client: ApolloClient
     lastUsed: number
 }
 
 class ClientPool {
     private readonly map = new Map<string, Meta>()
     private readonly anon = 'anon'
-    private timer: any
+    private timer: ReturnType<typeof setInterval> | undefined
 
     constructor(
         private url: string,
         private credentialsInCookies: CredentialsInCookies = 'include',
         private cachePolicy: CachePolicy = 'cache-first',
         private maxIdleMs = 30 * 60_000,
-        private sweepEveryMs = 5 * 60_000,
+        private sweepEveryMs = 5 * 60_000
     ) {
         this.map.set(this.anon, this.newMeta())
         this.timer = setInterval(() => this.sweep(), this.sweepEveryMs)
-        if (typeof this.timer?.unref === 'function') this.timer.unref()
+        if (typeof (this.timer as any)?.unref === 'function') (this.timer as any).unref()
     }
 
     private now() {
@@ -70,7 +75,10 @@ class ClientPool {
     }
 
     private newMeta(): Meta {
-        return {client: makeClient(this.url, this.cachePolicy, this.credentialsInCookies), lastUsed: this.now()}
+        return {
+            client: makeClient(this.url, this.cachePolicy, this.credentialsInCookies),
+            lastUsed: this.now()
+        }
     }
 
     get(tok: Token) {
@@ -81,7 +89,6 @@ class ClientPool {
     }
 
     private sweep() {
-        // console.log('[ClientPool] Sweep start', 'length=', this.map.size)
         const cutoff = this.now() - this.maxIdleMs
         for (const [k, m] of this.map) {
             if (k === this.anon) continue
@@ -91,14 +98,13 @@ class ClientPool {
                 } catch {
                 }
                 this.map.delete(k)
-                // console.log(`[ClientPool] Sweeping idle client for key ${k}`, 'length=', this.map.size)
             }
         }
     }
 
     remove(tok: Token) {
         const k = this.key(tok)
-        if (k === this.anon) return // keep anon if you want
+        if (k === this.anon) return
         const meta = this.map.get(k)
         if (!meta) return
         try {
@@ -124,38 +130,41 @@ class ClientPool {
 export function createClientPool(
     {directusUrl}: { directusUrl: string },
     cfg?: {
-        credentialsInCookies?: CredentialsInCookies,
-        cachePolicy: CachePolicy,
-        maxIdleMs?: number,
-        sweepEveryMs?: number,
+        credentialsInCookies?: CredentialsInCookies
+        cachePolicy: CachePolicy
+        maxIdleMs?: number
+        sweepEveryMs?: number
     }
 ) {
-    const pool = new ClientPool(directusUrl, cfg?.credentialsInCookies, cfg?.cachePolicy, cfg?.maxIdleMs, cfg?.sweepEveryMs)
+    const pool = new ClientPool(
+        directusUrl,
+        cfg?.credentialsInCookies,
+        cfg?.cachePolicy,
+        cfg?.maxIdleMs,
+        cfg?.sweepEveryMs
+    )
 
-    const proxy = new Proxy({}, {
-        get(_t, prop) {
-            // expose control methods explicitly
-            if (prop === 'removeClient') {
-                return (token: Token) => pool.remove(token)
-            }
-            if (prop === 'clearAllClients') {
-                return () => pool.clearAll()
-            }
+    const proxy = new Proxy(
+        {},
+        {
+            get(_t, prop) {
+                if (prop === 'removeClient') return (token: Token) => pool.remove(token)
+                if (prop === 'clearAllClients') return () => pool.clearAll()
 
-            // normal Apollo delegation
-            return (...args: any[]) => {
-                const token: Token = args?.[0]?.context?.token ?? null
-                const real: any = pool.get(token)
-                const value = real[prop]
-                return typeof value === 'function' ? value.apply(real, args) : value
+                return (...args: any[]) => {
+                    const token: Token = args?.[0]?.context?.token ?? null
+                    const real: any = pool.get(token)
+                    const value = (real as any)[prop]
+                    return typeof value === 'function' ? value.apply(real, args) : value
+                }
+            },
+            getPrototypeOf() {
+                return ApolloClient.prototype
             }
-        },
-        getPrototypeOf() {
-            return ApolloClient.prototype
         }
-    })
+    )
 
-    return proxy as unknown as ApolloClientType<NormalizedCacheObject> & {
+    return proxy as unknown as ApolloClientType & {
         removeClient: (token: Token) => void
         clearAllClients: () => void
     }
